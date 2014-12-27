@@ -46,6 +46,11 @@ type Room struct {
   edges []Point
 }
 
+type Region struct {
+  tiles []Point
+  edges []Point
+}
+
 func createRooms(dungeon [][]int, minSize, maxSize, attempts int) []Room {
   fmt.Println("Creating rooms...")
   var rooms []Room
@@ -89,37 +94,7 @@ func createRooms(dungeon [][]int, minSize, maxSize, attempts int) []Room {
   return rooms
 }
 
-func identifyEdges(dungeon [][]int, rooms []Room) {
-  for i := range rooms {
-    x := rooms[i].x
-    y := rooms[i].y
-
-    for j := x; j < x + rooms[i].width; j++ {
-      //dungeon[y-1][j] = EDGE
-      //dungeon[y+rooms[i].height][j] = EDGE
-
-      rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y-1})
-      rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y+rooms[i].height})
-    }
-
-    for k := y; k < y + rooms[i].height; k++ {
-      //dungeon[k][x-1] = EDGE
-      //dungeon[k][x+rooms[i].width] = EDGE
-
-      rooms[i].edges = append(rooms[i].edges, Point{ x: x-1, y: k})
-      rooms[i].edges = append(rooms[i].edges, Point{ x: x+rooms[i].width, y: k})
-    }
-  }
-}
-
 func createMaze(dungeon [][]int, rooms []Room) {
-  randRoom := rooms[rand.Intn(len(rooms))]
-  randEdge := randRoom.edges[rand.Intn(len(randRoom.edges))]
-  dungeon[randEdge.y][randEdge.x] = DOOR
-
-  // start recursing now somehow
-  continueMaze(dungeon, randEdge.x, randEdge.y)
-
   for i := 1; i<len(dungeon[0]) - 1; i++ {
     for j := 1; j<len(dungeon) - 1; j++ {
       if(dungeon[j-1][i-1] == WALL &&
@@ -132,6 +107,7 @@ func createMaze(dungeon [][]int, rooms []Room) {
         dungeon[j][i+1] == WALL &&
         dungeon[j+1][i+1] == WALL) {
 
+      	// TODO: start new tunnel region
         continueMaze(dungeon, i, j)
       }
     }
@@ -197,6 +173,35 @@ func continueMaze(dungeon [][]int, x int, y int) {
   }
 }
 
+func identifyEdges(dungeon [][]int, rooms []Room) {
+  for i := range rooms {
+    x := rooms[i].x
+    y := rooms[i].y
+
+    for j := x; j < x + rooms[i].width; j++ {
+      if(dungeon[y-2][j] == TUNNEL || dungeon[y-2][j] == FLOOR) {
+        dungeon[y-1][j] = EDGE
+        rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y-1})
+      }
+      if(dungeon[y+rooms[i].height+1][j] == TUNNEL || dungeon[y+rooms[i].height+1][j] == FLOOR) {
+        dungeon[y+rooms[i].height][j] = EDGE
+        rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y+rooms[i].height})
+      }
+    }
+
+    for k := y; k < y + rooms[i].height; k++ {
+      if(dungeon[k][x-2] == TUNNEL || dungeon[k][x-2] == FLOOR) {
+        dungeon[k][x-1] = EDGE
+        rooms[i].edges = append(rooms[i].edges, Point{ x: x-1, y: k})
+      }
+      if(dungeon[k][x+rooms[i].width+1] == TUNNEL || dungeon[k][x+rooms[i].width+1] == FLOOR) {
+        dungeon[k][x+rooms[i].width] = EDGE
+        rooms[i].edges = append(rooms[i].edges, Point{ x: x+rooms[i].width, y: k})
+      }
+    }
+  }
+}
+
 func renderDungeon(dungeon [][]int) {
   for y := 0; y < dungeonHeight; y++ {
     for x := 0; x < dungeonWidth; x++ {
@@ -230,10 +235,9 @@ func main() {
 
   dungeon := createEmptyDungeon(dungeonWidth, dungeonHeight)
   rooms := createRooms(dungeon, minRoomSize, maxRoomSize, roomAttempts)
-  identifyEdges(dungeon, rooms)
   createMaze(dungeon, rooms)
-  renderDungeon(dungeon)
-
+  identifyEdges(dungeon, rooms)
   // TODO: connect regions
+  renderDungeon(dungeon)
 }
 
