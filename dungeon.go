@@ -184,7 +184,7 @@ func continueMaze(dungeon [][]int, x int, y int) {
 	}
 
 	if( len(validTiles) > 1 ) {
-		i := rand.Intn( len(validTiles) - 1 )
+		i := rand.Intn( len(validTiles) )
 		point := validTiles[i]
 		dungeon[point.y][point.x] = TUNNEL
 		continueMaze(dungeon, point.x, point.y)
