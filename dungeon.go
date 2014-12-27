@@ -7,7 +7,7 @@ import (
 )
 
 // dungeon size
-var dungeonWidth = 80
+var dungeonWidth = 40
 var dungeonHeight = 40
 
 // dungeon rooms
@@ -19,7 +19,8 @@ const (
 	WALL = 0
 	FLOOR = 1
 	EDGE = 2
-	TUNNEL = 3
+	DOOR = 3
+	TUNNEL = 4
 )
 
 func createEmptyDungeon(width int, height int) [][]int {
@@ -61,10 +62,10 @@ func createRooms(dungeon [][]int, minSize, maxSize, attempts int) []Room {
 
 		shouldAppend := true
 		for r := range rooms {
-			if(x + width + 3 < rooms[r].x || // to the left
-			x > rooms[r].x + rooms[r].width + 3 || // to the right
-			y + height + 3 < rooms[r].y || // fully above
-			y > rooms[r].y + rooms[r].height + 3) { // fully below
+			if(x + width < rooms[r].x || // to the left
+			x > rooms[r].x + rooms[r].width || // to the right
+			y + height < rooms[r].y || // fully above
+			y > rooms[r].y + rooms[r].height) { // fully below
 				// do nothing
 			} else {
 				shouldAppend = false
@@ -94,16 +95,16 @@ func identifyEdges(dungeon [][]int, rooms []Room) {
 		y := rooms[i].y
 
 		for j := x; j < x + rooms[i].width; j++ {
-			dungeon[y-1][j] = EDGE
-			dungeon[y+rooms[i].height][j] = EDGE
+			//dungeon[y-1][j] = EDGE
+			//dungeon[y+rooms[i].height][j] = EDGE
 
 			rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y-1})
 			rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y+rooms[i].height})
 		}
 
 		for k := y; k < y + rooms[i].height; k++ {
-			dungeon[k][x-1] = EDGE
-			dungeon[k][x+rooms[i].width] = EDGE
+			//dungeon[k][x-1] = EDGE
+			//dungeon[k][x+rooms[i].width] = EDGE
 
 			rooms[i].edges = append(rooms[i].edges, Point{ x: x-1, y: k})
 			rooms[i].edges = append(rooms[i].edges, Point{ x: x+rooms[i].width, y: k})
@@ -114,13 +115,86 @@ func identifyEdges(dungeon [][]int, rooms []Room) {
 func createMaze(dungeon [][]int, rooms []Room) {
 	randRoom := rooms[rand.Intn(len(rooms))]
 	randEdge := randRoom.edges[rand.Intn(len(randRoom.edges))]
-	dungeon[randEdge.y][randEdge.x] = TUNNEL
+	dungeon[randEdge.y][randEdge.x] = DOOR
 
 	// start recursing now somehow
 	continueMaze(dungeon, randEdge.x, randEdge.y)
+
+	for i := 1; i<len(dungeon[0]) - 1; i++ {
+		for j := 1; j<len(dungeon) - 1; j++ {
+			if(dungeon[j-1][i-1] == WALL &&
+				dungeon[j][i-1] == WALL &&
+				dungeon[j+1][i-1] == WALL &&
+				dungeon[j-1][i] == WALL &&
+				dungeon[j][i] == WALL &&
+				dungeon[j+1][i] == WALL &&
+				dungeon[j-1][i+1] == WALL &&
+				dungeon[j][i+1] == WALL &&
+				dungeon[j+1][i+1] == WALL) {
+
+				continueMaze(dungeon, i, j)
+			}
+		}
+	}
 }
 
 func continueMaze(dungeon [][]int, x int, y int) {
+	validTiles := []Point{}
+
+	if(x-2 >= 0 && dungeon[y][x-1] == WALL) {
+		// check if is valid move by checking surroundings
+		if(dungeon[y][x-2] == WALL &&
+			dungeon[y+1][x-2] == WALL &&
+			dungeon[y-1][x-2] == WALL &&
+			dungeon[y+1][x-1] == WALL &&
+			dungeon[y-1][x-1] == WALL) {
+
+			validTiles = append(validTiles, Point{y: y, x: x-1})
+		}
+	}
+	if(x+2 < dungeonWidth && dungeon[y][x+1] == WALL) {
+		if(dungeon[y][x+2] == WALL &&
+			dungeon[y-1][x+2] == WALL &&
+			dungeon[y+1][x+2] == WALL &&
+			dungeon[y+1][x+1] == WALL &&
+			dungeon[y-1][x+1] == WALL) {
+
+			validTiles = append(validTiles, Point{y: y, x: x+1})
+		}
+	}
+	if(y-2 >= 0 && dungeon[y-1][x] == WALL) {
+		if(dungeon[y-2][x] == WALL &&
+			dungeon[y-2][x-1] == WALL &&
+			dungeon[y-2][x+1] == WALL &&
+			dungeon[y-1][x-1] == WALL &&
+			dungeon[y-1][x+1] == WALL) {
+
+			validTiles = append(validTiles, Point{y: y-1, x: x})
+		}
+	}
+	if(y+2 < dungeonHeight && dungeon[y+1][x] == WALL) {
+		if(dungeon[y+2][x] == WALL &&
+			dungeon[y+2][x-1] == WALL &&
+			dungeon[y+2][x+1] == WALL &&
+			dungeon[y+1][x-1] == WALL &&
+			dungeon[y+1][x+1] == WALL) {
+
+			validTiles = append(validTiles, Point{y: y+1, x: x})
+		}
+	}
+
+	if( len(validTiles) > 1 ) {
+		i := rand.Intn( len(validTiles) - 1 )
+		point := validTiles[i]
+		dungeon[point.y][point.x] = TUNNEL
+		continueMaze(dungeon, point.x, point.y)
+		continueMaze(dungeon, x, y)
+	} else if( len(validTiles) == 1 ) {
+		point := validTiles[0]
+		dungeon[point.y][point.x] = TUNNEL
+		continueMaze(dungeon, point.x, point.y)
+		continueMaze(dungeon, x, y)
+	}
 }
 
 func renderDungeon(dungeon [][]int) {
@@ -128,23 +202,27 @@ func renderDungeon(dungeon [][]int) {
 		for x := 0; x < dungeonWidth; x++ {
 			switch dungeon[y][x] {
 			case WALL:
-				fmt.Print("0")
+				fmt.Print("0 ")
 				break
 			case FLOOR:
-				fmt.Print("-")
+				fmt.Print("= ")
 				break
 			case EDGE:
-				fmt.Print("*")
+				fmt.Print("* ")
+				break
+			case DOOR:
+				fmt.Print("| ")
 				break
 			case TUNNEL:
-				fmt.Print("=")
+				fmt.Print("- ")
 				break
+			default:
+				fmt.Print("ER")
 			}
 		}
 
 		fmt.Println()
 	}
-	fmt.Println()
 }
 
 func main() {
@@ -155,5 +233,7 @@ func main() {
 	identifyEdges(dungeon, rooms)
 	createMaze(dungeon, rooms)
 	renderDungeon(dungeon)
+
+	// TODO: connect regions
 }
 
