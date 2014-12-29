@@ -28,7 +28,6 @@ type Point struct {
 }
 
 type Tile struct {
-  location Point
   region int
   material int
 }
@@ -107,8 +106,8 @@ func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
 
 func createMaze(dungeon Dungeon) Dungeon {
   fmt.Println("Creating tunnels...")
-  for x := 1; x<dungeonWidth - 1; x++ {
-    for y := 1; y<dungeonHeight - 1; y++ {
+  for x := 1; x<dungeon.width - 1; x++ {
+    for y := 1; y<dungeon.height - 1; y++ {
       if(dungeon.tiles[y-1][x-1].material == WALL &&
         dungeon.tiles[y][x-1].material == WALL &&
         dungeon.tiles[y+1][x-1].material == WALL &&
@@ -250,8 +249,8 @@ func connectRegions(dungeon Dungeon) Dungeon {
         surroundingTiles[j].region != roomRegion) {
 
         dungeon.tiles[edge.y][edge.x].material = DOOR
-        for x := room.location.x-1; x < room.location.x + room.width - 1; x++ {
-          for y := room.location.y-1; y < room.location.y + room.height - 1; y++ {
+        for x := room.location.x; x < room.location.x + room.width; x++ {
+          for y := room.location.y; y < room.location.y + room.height; y++ {
             dungeon.tiles[y][x].region = surroundingTiles[j].region
           }
         }
@@ -261,13 +260,50 @@ func connectRegions(dungeon Dungeon) Dungeon {
     }
   }
 
+  // go through the rooms and their edges in random order
+  // to see if any of them are still a separate region
+  connectedRegions := map[int]bool{}
+  RoomsLoop: for i := range rand.Perm( len(dungeon.rooms) ) {
+    for j := range rand.Perm( len(dungeon.rooms[i].edges) ) {
+      room := dungeon.rooms[i]
+      edge := room.edges[j]
+      x := edge.x
+      y := edge.y
+
+      surroundingPoints := [4]Point {
+        Point{ x: x-1, y: y },
+        Point{ x: x+1, y: y },
+        Point{ x: x, y: y-1 },
+        Point{ x: x, y: y+1 },
+      }
+
+      curRegion := -1
+      for k := range surroundingPoints {
+        tile := dungeon.tiles[ surroundingPoints[k].y ][ surroundingPoints[k].x ]
+        if(curRegion == -1 && tile.region != 0) {
+          curRegion = tile.region
+        } else if(tile.region != curRegion &&
+          tile.region != 0 &&
+          !connectedRegions[ tile.region ]) {
+          
+          dungeon.tiles[y][x].material = DOOR
+          connectedRegions[ tile.region ] = true
+          connectedRegions[ curRegion ] = true
+
+          continue RoomsLoop
+        }
+      }
+
+    }
+  }
+
   return dungeon
 }
 
 func trimTunnels(dungeon Dungeon) {
   fmt.Println("Trimming tunnels...")
-  for x := 1; x<dungeonWidth - 1; x++ {
-    for y := 1; y<dungeonHeight - 1; y++ {
+  for x := 1; x<dungeon.width - 1; x++ {
+    for y := 1; y<dungeon.height - 1; y++ {
       continueTrimTunnels(dungeon, x, y)
     }
   }
@@ -293,8 +329,9 @@ func continueTrimTunnels(dungeon Dungeon, x int, y int) {
       }
     }
 
-    if(wallCount == 3) {
+    if(wallCount >= 3) {
       dungeon.tiles[y][x].material = WALL
+      dungeon.tiles[y][x].region = 0
       if(nextPoint.x != 0 || nextPoint.y != 0) {
         continueTrimTunnels(dungeon, nextPoint.x, nextPoint.y)
       }
@@ -330,7 +367,7 @@ func renderDungeon(dungeon Dungeon) {
 }
 
 func main() {
-  rand.Seed( time.Now().UTC().UnixNano())
+  rand.Seed( time.Now().UTC().UnixNano() )
 
   dungeon := createEmptyDungeon(dungeonWidth, dungeonHeight)
   dungeon = createRooms(dungeon, minRoomSize, maxRoomSize, roomAttempts)
