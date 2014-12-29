@@ -18,9 +18,8 @@ var maxRoomSize = 10
 const (
   WALL = 0
   FLOOR = 1
-  EDGE = 2
-  DOOR = 3
-  TUNNEL = 4
+  DOOR = 2
+  TUNNEL = 3
 )
 
 type Point struct {
@@ -107,20 +106,21 @@ func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
 }
 
 func createMaze(dungeon Dungeon) Dungeon {
-  for i := 1; i<len(dungeon.tiles[0]) - 1; i++ {
-    for j := 1; j<len(dungeon.tiles) - 1; j++ {
-      if(dungeon.tiles[j-1][i-1].material == WALL &&
-        dungeon.tiles[j][i-1].material == WALL &&
-        dungeon.tiles[j+1][i-1].material == WALL &&
-        dungeon.tiles[j-1][i].material == WALL &&
-        dungeon.tiles[j][i].material == WALL &&
-        dungeon.tiles[j+1][i].material == WALL &&
-        dungeon.tiles[j-1][i+1].material == WALL &&
-        dungeon.tiles[j][i+1].material == WALL &&
-        dungeon.tiles[j+1][i+1].material == WALL) {
+  fmt.Println("Creating tunnels...")
+  for x := 1; x<dungeonWidth - 1; x++ {
+    for y := 1; y<dungeonHeight - 1; y++ {
+      if(dungeon.tiles[y-1][x-1].material == WALL &&
+        dungeon.tiles[y][x-1].material == WALL &&
+        dungeon.tiles[y+1][x-1].material == WALL &&
+        dungeon.tiles[y-1][x].material == WALL &&
+        dungeon.tiles[y][x].material == WALL &&
+        dungeon.tiles[y+1][x].material == WALL &&
+        dungeon.tiles[y-1][x+1].material == WALL &&
+        dungeon.tiles[y][x+1].material == WALL &&
+        dungeon.tiles[y+1][x+1].material == WALL) {
 
         dungeon.numRegions++
-        continueMaze(dungeon, i, j)
+        continueMaze(dungeon, x, y)
       }
     }
   }
@@ -192,6 +192,7 @@ func continueMaze(dungeon Dungeon, x int, y int) {
 }
 
 func identifyEdges(dungeon Dungeon) Dungeon {
+  fmt.Println("Identifying edges...")
   for i := range dungeon.rooms {
     x := dungeon.rooms[i].location.x
     y := dungeon.rooms[i].location.y
@@ -200,13 +201,11 @@ func identifyEdges(dungeon Dungeon) Dungeon {
       if(dungeon.tiles[y-2][j].material == TUNNEL ||
         dungeon.tiles[y-2][j].material == FLOOR) {
         
-        dungeon.tiles[y-1][j].material = EDGE
         dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: j, y: y-1})
       }
       if(dungeon.tiles[y+dungeon.rooms[i].height+1][j].material == TUNNEL ||
         dungeon.tiles[y+dungeon.rooms[i].height+1][j].material == FLOOR) {
         
-        dungeon.tiles[y+dungeon.rooms[i].height][j].material = EDGE
         dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: j, y: y+dungeon.rooms[i].height})
       }
     }
@@ -215,13 +214,11 @@ func identifyEdges(dungeon Dungeon) Dungeon {
       if(dungeon.tiles[k][x-2].material == TUNNEL ||
         dungeon.tiles[k][x-2].material == FLOOR) {
         
-        dungeon.tiles[k][x-1].material = EDGE
         dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: x-1, y: k})
       }
       if(dungeon.tiles[k][x+dungeon.rooms[i].width+1].material == TUNNEL ||
         dungeon.tiles[k][x+dungeon.rooms[i].width+1].material == FLOOR) {
         
-        dungeon.tiles[k][x+dungeon.rooms[i].width].material = EDGE
         dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: x+dungeon.rooms[i].width, y: k})
       }
     }
@@ -231,6 +228,7 @@ func identifyEdges(dungeon Dungeon) Dungeon {
 }
 
 func connectRegions(dungeon Dungeon) Dungeon {
+  fmt.Println("Conneting regions...")
   for i := range dungeon.rooms {
     room := dungeon.rooms[i]
     edge := room.edges[ rand.Intn( len(dungeon.rooms[i].edges) ) ]
@@ -266,6 +264,44 @@ func connectRegions(dungeon Dungeon) Dungeon {
   return dungeon
 }
 
+func trimTunnels(dungeon Dungeon) {
+  fmt.Println("Trimming tunnels...")
+  for x := 1; x<dungeonWidth - 1; x++ {
+    for y := 1; y<dungeonHeight - 1; y++ {
+      continueTrimTunnels(dungeon, x, y)
+    }
+  }
+}
+
+func continueTrimTunnels(dungeon Dungeon, x int, y int) {
+  if(dungeon.tiles[y][x].material == TUNNEL || dungeon.tiles[y][x].material == DOOR) {
+    wallCount := 0
+    nextPoint := Point{}
+
+    surroundingPoints := [4]Point{}
+    surroundingPoints[0] = Point{ x: x-1, y: y }
+    surroundingPoints[1] = Point{ x: x+1, y: y }
+    surroundingPoints[2] = Point{ x: x, y: y-1 }
+    surroundingPoints[3] = Point{ x: x, y: y+1 }
+
+    for i := range surroundingPoints {
+      tile := dungeon.tiles[ surroundingPoints[i].y ][ surroundingPoints[i].x ]
+      if(tile.material == WALL) {
+        wallCount++
+      } else if(tile.material == TUNNEL || tile.material == DOOR) {
+        nextPoint = Point{ x: surroundingPoints[i].x, y: surroundingPoints[i].y }
+      }
+    }
+
+    if(wallCount == 3) {
+      dungeon.tiles[y][x].material = WALL
+      if(nextPoint.x != 0 || nextPoint.y != 0) {
+        continueTrimTunnels(dungeon, nextPoint.x, nextPoint.y)
+      }
+    }
+  }
+}
+
 func renderDungeon(dungeon Dungeon) {
   fmt.Println("Dungeon: (",dungeon.width,",",dungeon.height,") Regions: ", dungeon.numRegions)
 
@@ -277,9 +313,6 @@ func renderDungeon(dungeon Dungeon) {
         break
       case FLOOR:
         fmt.Print("= ")
-        break
-      case EDGE:
-        fmt.Print("* ")
         break
       case DOOR:
         fmt.Print("| ")
@@ -304,6 +337,7 @@ func main() {
   dungeon = createMaze(dungeon)
   dungeon = identifyEdges(dungeon)
   dungeon = connectRegions(dungeon)
+  trimTunnels(dungeon)
   renderDungeon(dungeon)
 }
 
