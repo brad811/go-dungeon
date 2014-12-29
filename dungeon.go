@@ -23,35 +23,44 @@ const (
   TUNNEL = 4
 )
 
-func createEmptyDungeon(width int, height int) [][]int {
-  fmt.Println("Creating empty dungeon...")
-  dungeon := make([][]int, height)
-  for i := range dungeon {
-    dungeon[i] = make([]int, width)
-  }
-
-  return dungeon
-}
-
 type Point struct {
   x int
   y int
 }
 
+type Tile struct {
+  location Point
+  region int
+  material int
+}
+
 type Room struct {
   width int
   height int
-  x int
-  y int
+  location Point
   edges []Point
 }
 
-type Region struct {
-  tiles []Point
-  edges []Point
+type Dungeon struct {
+  tiles [][]Tile
+  rooms []Room
+  width int
+  height int
+  numRegions int
 }
 
-func createRooms(dungeon [][]int, minSize, maxSize, attempts int) []Room {
+func createEmptyDungeon(width int, height int) Dungeon {
+  fmt.Println("Creating empty dungeon...")
+  dungeon := Dungeon{ width: width, height: height }
+  dungeon.tiles = make([][]Tile, height)
+  for i := range dungeon.tiles {
+    dungeon.tiles[i] = make([]Tile, width)
+  }
+
+  return dungeon
+}
+
+func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
   fmt.Println("Creating rooms...")
   var rooms []Room
 
@@ -59,18 +68,18 @@ func createRooms(dungeon [][]int, minSize, maxSize, attempts int) []Room {
     width := rand.Intn(maxSize - minSize) + minSize
     height := rand.Intn(maxSize - minSize) + minSize
 
-    maxX := len(dungeon[0]) - width - 2
-    maxY := len(dungeon) - height - 2
+    maxX := dungeon.width - width - 2
+    maxY := dungeon.height - height - 2
 
     x := rand.Intn(maxX - 3) + 3
     y := rand.Intn(maxY - 3) + 3
 
     shouldAppend := true
     for r := range rooms {
-      if(x + width < rooms[r].x || // to the left
-      x > rooms[r].x + rooms[r].width || // to the right
-      y + height < rooms[r].y || // fully above
-      y > rooms[r].y + rooms[r].height) { // fully below
+      if(x + width < rooms[r].location.x || // to the left
+      x > rooms[r].location.x + rooms[r].width || // to the right
+      y + height < rooms[r].location.y || // fully above
+      y > rooms[r].location.y + rooms[r].height) { // fully below
         // do nothing
       } else {
         shouldAppend = false
@@ -79,81 +88,86 @@ func createRooms(dungeon [][]int, minSize, maxSize, attempts int) []Room {
     }
 
     if(shouldAppend) {
-      rooms = append(rooms, Room{ width: width, height: height, x: x, y: y })
+      rooms = append(rooms, Room{ width: width, height: height, location: Point{ x: x, y: y } })
     }
   }
 
   for r := range rooms {
-    for i := rooms[r].x; i < rooms[r].x + rooms[r].width; i++ {
-      for j := rooms[r].y; j < rooms[r].y + rooms[r].height; j++ {
-        dungeon[j][i] = FLOOR
+    dungeon.numRegions++
+    for i := rooms[r].location.x; i < rooms[r].location.x + rooms[r].width; i++ {
+      for j := rooms[r].location.y; j < rooms[r].location.y + rooms[r].height; j++ {
+        dungeon.tiles[j][i].material = FLOOR
+        dungeon.tiles[j][i].region = dungeon.numRegions
       }
     }
   }
 
-  return rooms
+  dungeon.rooms = rooms
+  return dungeon
 }
 
-func createMaze(dungeon [][]int, rooms []Room) {
-  for i := 1; i<len(dungeon[0]) - 1; i++ {
-    for j := 1; j<len(dungeon) - 1; j++ {
-      if(dungeon[j-1][i-1] == WALL &&
-        dungeon[j][i-1] == WALL &&
-        dungeon[j+1][i-1] == WALL &&
-        dungeon[j-1][i] == WALL &&
-        dungeon[j][i] == WALL &&
-        dungeon[j+1][i] == WALL &&
-        dungeon[j-1][i+1] == WALL &&
-        dungeon[j][i+1] == WALL &&
-        dungeon[j+1][i+1] == WALL) {
+func createMaze(dungeon Dungeon) Dungeon {
+  for i := 1; i<len(dungeon.tiles[0]) - 1; i++ {
+    for j := 1; j<len(dungeon.tiles) - 1; j++ {
+      if(dungeon.tiles[j-1][i-1].material == WALL &&
+        dungeon.tiles[j][i-1].material == WALL &&
+        dungeon.tiles[j+1][i-1].material == WALL &&
+        dungeon.tiles[j-1][i].material == WALL &&
+        dungeon.tiles[j][i].material == WALL &&
+        dungeon.tiles[j+1][i].material == WALL &&
+        dungeon.tiles[j-1][i+1].material == WALL &&
+        dungeon.tiles[j][i+1].material == WALL &&
+        dungeon.tiles[j+1][i+1].material == WALL) {
 
-      	// TODO: start new tunnel region
+        dungeon.numRegions++
         continueMaze(dungeon, i, j)
       }
     }
   }
+
+  return dungeon
 }
 
-func continueMaze(dungeon [][]int, x int, y int) {
+func continueMaze(dungeon Dungeon, x int, y int) {
   validTiles := []Point{}
 
-  if(x-2 >= 0 && dungeon[y][x-1] == WALL) {
+  if(x-2 >= 0 && dungeon.tiles[y][x-1].material == WALL) {
     // check if is valid move by checking surroundings
-    if(dungeon[y][x-2] == WALL &&
-      dungeon[y+1][x-2] == WALL &&
-      dungeon[y-1][x-2] == WALL &&
-      dungeon[y+1][x-1] == WALL &&
-      dungeon[y-1][x-1] == WALL) {
+    if(dungeon.tiles[y][x-2].material == WALL &&
+      dungeon.tiles[y+1][x-2].material == WALL &&
+      dungeon.tiles[y-1][x-2].material == WALL &&
+      dungeon.tiles[y+1][x-1].material == WALL &&
+      dungeon.tiles[y-1][x-1].material == WALL) {
 
       validTiles = append(validTiles, Point{y: y, x: x-1})
     }
   }
-  if(x+2 < dungeonWidth && dungeon[y][x+1] == WALL) {
-    if(dungeon[y][x+2] == WALL &&
-      dungeon[y-1][x+2] == WALL &&
-      dungeon[y+1][x+2] == WALL &&
-      dungeon[y+1][x+1] == WALL &&
-      dungeon[y-1][x+1] == WALL) {
+  if(x+2 < dungeon.width && dungeon.tiles[y][x+1].material == WALL) {
+    if(dungeon.tiles[y][x+2].material == WALL &&
+      dungeon.tiles[y-1][x+2].material == WALL &&
+      dungeon.tiles[y+1][x+2].material == WALL &&
+      dungeon.tiles[y+1][x+1].material == WALL &&
+      dungeon.tiles[y-1][x+1].material == WALL) {
 
       validTiles = append(validTiles, Point{y: y, x: x+1})
     }
   }
-  if(y-2 >= 0 && dungeon[y-1][x] == WALL) {
-    if(dungeon[y-2][x] == WALL &&
-      dungeon[y-2][x-1] == WALL &&
-      dungeon[y-2][x+1] == WALL &&
-      dungeon[y-1][x-1] == WALL &&
-      dungeon[y-1][x+1] == WALL) {
+  if(y-2 >= 0 && dungeon.tiles[y-1][x].material == WALL) {
+    if(dungeon.tiles[y-2][x].material == WALL &&
+      dungeon.tiles[y-2][x-1].material == WALL &&
+      dungeon.tiles[y-2][x+1].material == WALL &&
+      dungeon.tiles[y-1][x-1].material == WALL &&
+      dungeon.tiles[y-1][x+1].material == WALL) {
 
       validTiles = append(validTiles, Point{y: y-1, x: x})
     }
   }
-  if(y+2 < dungeonHeight && dungeon[y+1][x] == WALL) {
-    if(dungeon[y+2][x] == WALL &&
-      dungeon[y+2][x-1] == WALL &&
-      dungeon[y+2][x+1] == WALL &&
-      dungeon[y+1][x-1] == WALL &&
-      dungeon[y+1][x+1] == WALL) {
+  if(y+2 < dungeon.height && dungeon.tiles[y+1][x].material == WALL) {
+    if(dungeon.tiles[y+2][x].material == WALL &&
+      dungeon.tiles[y+2][x-1].material == WALL &&
+      dungeon.tiles[y+2][x+1].material == WALL &&
+      dungeon.tiles[y+1][x-1].material == WALL &&
+      dungeon.tiles[y+1][x+1].material == WALL) {
 
       validTiles = append(validTiles, Point{y: y+1, x: x})
     }
@@ -162,50 +176,102 @@ func continueMaze(dungeon [][]int, x int, y int) {
   if( len(validTiles) > 1 ) {
     i := rand.Intn( len(validTiles) )
     point := validTiles[i]
-    dungeon[point.y][point.x] = TUNNEL
+    dungeon.tiles[point.y][point.x].material = TUNNEL
+    dungeon.tiles[point.y][point.x].region = dungeon.numRegions
+
     continueMaze(dungeon, point.x, point.y)
     continueMaze(dungeon, x, y)
   } else if( len(validTiles) == 1 ) {
     point := validTiles[0]
-    dungeon[point.y][point.x] = TUNNEL
+    dungeon.tiles[point.y][point.x].material = TUNNEL
+    dungeon.tiles[point.y][point.x].region = dungeon.numRegions
+
     continueMaze(dungeon, point.x, point.y)
     continueMaze(dungeon, x, y)
   }
 }
 
-func identifyEdges(dungeon [][]int, rooms []Room) {
-  for i := range rooms {
-    x := rooms[i].x
-    y := rooms[i].y
+func identifyEdges(dungeon Dungeon) Dungeon {
+  for i := range dungeon.rooms {
+    x := dungeon.rooms[i].location.x
+    y := dungeon.rooms[i].location.y
 
-    for j := x; j < x + rooms[i].width; j++ {
-      if(dungeon[y-2][j] == TUNNEL || dungeon[y-2][j] == FLOOR) {
-        dungeon[y-1][j] = EDGE
-        rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y-1})
+    for j := x; j < x + dungeon.rooms[i].width; j++ {
+      if(dungeon.tiles[y-2][j].material == TUNNEL ||
+        dungeon.tiles[y-2][j].material == FLOOR) {
+        
+        dungeon.tiles[y-1][j].material = EDGE
+        dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: j, y: y-1})
       }
-      if(dungeon[y+rooms[i].height+1][j] == TUNNEL || dungeon[y+rooms[i].height+1][j] == FLOOR) {
-        dungeon[y+rooms[i].height][j] = EDGE
-        rooms[i].edges = append(rooms[i].edges, Point{ x: j, y: y+rooms[i].height})
+      if(dungeon.tiles[y+dungeon.rooms[i].height+1][j].material == TUNNEL ||
+        dungeon.tiles[y+dungeon.rooms[i].height+1][j].material == FLOOR) {
+        
+        dungeon.tiles[y+dungeon.rooms[i].height][j].material = EDGE
+        dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: j, y: y+dungeon.rooms[i].height})
       }
     }
 
-    for k := y; k < y + rooms[i].height; k++ {
-      if(dungeon[k][x-2] == TUNNEL || dungeon[k][x-2] == FLOOR) {
-        dungeon[k][x-1] = EDGE
-        rooms[i].edges = append(rooms[i].edges, Point{ x: x-1, y: k})
+    for k := y; k < y + dungeon.rooms[i].height; k++ {
+      if(dungeon.tiles[k][x-2].material == TUNNEL ||
+        dungeon.tiles[k][x-2].material == FLOOR) {
+        
+        dungeon.tiles[k][x-1].material = EDGE
+        dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: x-1, y: k})
       }
-      if(dungeon[k][x+rooms[i].width+1] == TUNNEL || dungeon[k][x+rooms[i].width+1] == FLOOR) {
-        dungeon[k][x+rooms[i].width] = EDGE
-        rooms[i].edges = append(rooms[i].edges, Point{ x: x+rooms[i].width, y: k})
+      if(dungeon.tiles[k][x+dungeon.rooms[i].width+1].material == TUNNEL ||
+        dungeon.tiles[k][x+dungeon.rooms[i].width+1].material == FLOOR) {
+        
+        dungeon.tiles[k][x+dungeon.rooms[i].width].material = EDGE
+        dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{ x: x+dungeon.rooms[i].width, y: k})
       }
     }
   }
+
+  return dungeon
 }
 
-func renderDungeon(dungeon [][]int) {
-  for y := 0; y < dungeonHeight; y++ {
-    for x := 0; x < dungeonWidth; x++ {
-      switch dungeon[y][x] {
+func connectRegions(dungeon Dungeon) Dungeon {
+  for i := range dungeon.rooms {
+    room := dungeon.rooms[i]
+    edge := room.edges[ rand.Intn( len(dungeon.rooms[i].edges) ) ]
+    roomRegion := dungeon.tiles[ dungeon.rooms[i].location.y ][ dungeon.rooms[i].location.x ].region
+
+    // check if edge is unconnected
+    surroundingTiles := [8]Tile{}
+    surroundingTiles[0] = dungeon.tiles[edge.y-1][edge.x-1]
+    surroundingTiles[1] = dungeon.tiles[edge.y-1][edge.x]
+    surroundingTiles[2] = dungeon.tiles[edge.y-1][edge.x+1]
+    surroundingTiles[3] = dungeon.tiles[edge.y][edge.x-1]
+    surroundingTiles[4] = dungeon.tiles[edge.y][edge.x+1]
+    surroundingTiles[5] = dungeon.tiles[edge.y+1][edge.x-1]
+    surroundingTiles[6] = dungeon.tiles[edge.y+1][edge.x]
+    surroundingTiles[7] = dungeon.tiles[edge.y+1][edge.x+1]
+
+    for j := range surroundingTiles {
+      if((surroundingTiles[j].material == FLOOR || surroundingTiles[j].material == TUNNEL) &&
+        surroundingTiles[j].region != roomRegion) {
+
+        dungeon.tiles[edge.y][edge.x].material = DOOR
+        for x := room.location.x-1; x < room.location.x + room.width - 1; x++ {
+          for y := room.location.y-1; y < room.location.y + room.height - 1; y++ {
+            dungeon.tiles[y][x].region = surroundingTiles[j].region
+          }
+        }
+
+        break
+      }
+    }
+  }
+
+  return dungeon
+}
+
+func renderDungeon(dungeon Dungeon) {
+  fmt.Println("Dungeon: (",dungeon.width,",",dungeon.height,") Regions: ", dungeon.numRegions)
+
+  for y := 0; y < dungeon.height; y++ {
+    for x := 0; x < dungeon.width; x++ {
+      switch dungeon.tiles[y][x].material {
       case WALL:
         fmt.Print("0 ")
         break
@@ -234,10 +300,10 @@ func main() {
   rand.Seed( time.Now().UTC().UnixNano())
 
   dungeon := createEmptyDungeon(dungeonWidth, dungeonHeight)
-  rooms := createRooms(dungeon, minRoomSize, maxRoomSize, roomAttempts)
-  createMaze(dungeon, rooms)
-  identifyEdges(dungeon, rooms)
-  // TODO: connect regions
+  dungeon = createRooms(dungeon, minRoomSize, maxRoomSize, roomAttempts)
+  dungeon = createMaze(dungeon)
+  dungeon = identifyEdges(dungeon)
+  dungeon = connectRegions(dungeon)
   renderDungeon(dungeon)
 }
 
