@@ -234,15 +234,16 @@ func connectRegions(dungeon Dungeon) Dungeon {
     roomRegion := dungeon.tiles[ dungeon.rooms[i].location.y ][ dungeon.rooms[i].location.x ].region
 
     // check if edge is unconnected
-    surroundingTiles := [8]Tile{}
-    surroundingTiles[0] = dungeon.tiles[edge.y-1][edge.x-1]
-    surroundingTiles[1] = dungeon.tiles[edge.y-1][edge.x]
-    surroundingTiles[2] = dungeon.tiles[edge.y-1][edge.x+1]
-    surroundingTiles[3] = dungeon.tiles[edge.y][edge.x-1]
-    surroundingTiles[4] = dungeon.tiles[edge.y][edge.x+1]
-    surroundingTiles[5] = dungeon.tiles[edge.y+1][edge.x-1]
-    surroundingTiles[6] = dungeon.tiles[edge.y+1][edge.x]
-    surroundingTiles[7] = dungeon.tiles[edge.y+1][edge.x+1]
+    surroundingTiles := [8]Tile{
+      dungeon.tiles[edge.y-1][edge.x-1],
+      dungeon.tiles[edge.y-1][edge.x],
+      dungeon.tiles[edge.y-1][edge.x+1],
+      dungeon.tiles[edge.y][edge.x-1],
+      dungeon.tiles[edge.y][edge.x+1],
+      dungeon.tiles[edge.y+1][edge.x-1],
+      dungeon.tiles[edge.y+1][edge.x],
+      dungeon.tiles[edge.y+1][edge.x+1],
+    }
 
     for j := range surroundingTiles {
       if((surroundingTiles[j].material == FLOOR || surroundingTiles[j].material == TUNNEL) &&
@@ -314,11 +315,12 @@ func continueTrimTunnels(dungeon Dungeon, x int, y int) {
     wallCount := 0
     nextPoint := Point{}
 
-    surroundingPoints := [4]Point{}
-    surroundingPoints[0] = Point{ x: x-1, y: y }
-    surroundingPoints[1] = Point{ x: x+1, y: y }
-    surroundingPoints[2] = Point{ x: x, y: y-1 }
-    surroundingPoints[3] = Point{ x: x, y: y+1 }
+    surroundingPoints := [4]Point{
+      Point{ x: x-1, y: y },
+      Point{ x: x+1, y: y },
+      Point{ x: x, y: y-1 },
+      Point{ x: x, y: y+1 },
+    }
 
     for i := range surroundingPoints {
       tile := dungeon.tiles[ surroundingPoints[i].y ][ surroundingPoints[i].x ]
