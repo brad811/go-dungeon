@@ -1,21 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Go Dungeon Generator</title>
     <link rel='stylesheet' href='style.css' type='text/css' />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css">
   </head>
   <body>
     <table>
       <tr>
         <td>
-          <img id="dungeonImage" src="/generate">
+          <input id="generateButton" type="button" value="Generate Dungeon">
+          <div class="option_container">
+            <div id="dungeon_width_label" class="label"></div>
+            <div id="dungeon_width_slider" class="slider"></div>
+          </div>
+          <div class="option_container">
+            <div id="dungeon_height_label" class="label"></div>
+            <div id="dungeon_height_slider" class="slider"></div>
+          </div>
+          <div class="option_container">
+            <div id="room_attempts_label" class="label"></div>
+            <div id="room_attempts_slider" class="slider"></div>
+          </div>
+          <div class="option_container">
+            <div id="min_room_size_label" class="label"></div>
+            <div id="min_room_size_slider" class="slider"></div>
+          </div>
+          <div class="option_container">
+            <div id="max_room_size_label" class="label"></div>
+            <div id="max_room_size_slider" class="slider"></div>
+          </div>
+          <div class="option_container">
+            <div id="pixel_size_label" class="label"></div>
+            <div id="pixel_size_slider" class="slider"></div>
+          </div>
+          <div class="option_container">
+            <div id="seed_label" class="label"></div>
+            <div id="seed_slider" class="slider"></div>
+          </div>
         </td>
         <td>
-          <input id="generateButton" type="button" value="Generate Dungeon">
+          <img id="dungeonImage" src="/generate">
         </td>
       </tr>
     </table>
     <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.11.2/jquery-ui.min.js"></script>
     <script type="text/javascript" src="script.js"></script>
   </body>
 </html>

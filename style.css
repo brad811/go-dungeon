@@ -2,3 +2,15 @@ td {
   vertical-align: top;
   padding: 10px 10px 0 10px;
 }
+
+.option_container {
+	width: 200px;
+}
+
+.label {
+	margin-bottom: 5px;
+}
+
+#generateButton {
+	margin-bottom: 10px;
+}

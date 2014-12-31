@@ -7,10 +7,11 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
+	"math"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -18,6 +19,7 @@ import (
 var roomAttempts = 200
 var minRoomSize = 5
 var maxRoomSize = 15
+var pixelSize = 4
 
 const (
 	WALL   = 0
@@ -374,7 +376,6 @@ func renderDungeon(dungeon Dungeon) {
 }
 
 func dungeonToImage(dungeon Dungeon) image.Image {
-	pixelSize := 4
 	m := image.NewRGBA(image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize))
 	for y := 0; y < dungeon.height; y++ {
 		for x := 0; x < dungeon.width; x++ {
@@ -421,6 +422,19 @@ func generateDungeon(width int, height int) Dungeon {
 	return dungeon
 }
 
+func parseIntOption(option []string, defaultValue int, min int, max int) int {
+	if(len(option) == 0) {
+		return defaultValue
+	} else {
+		value, err := strconv.Atoi(option[0])
+		if err != nil || value < min || value > max {
+			return defaultValue
+		} else {
+			return value
+		}
+	}
+}
+
 func main() {
 	serverFlag := flag.Bool("server", false, "Run as a server on port 8080 and serve PNG files")
 	flag.Parse()
@@ -433,15 +447,27 @@ func main() {
 
 		http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path[1:]
-			fmt.Println("path: ", path)
-			seed, err := strconv.ParseInt(strings.Split(path, "/")[1], 10, 64)
-			if err == nil {
-				rand.Seed(seed)
+			query, _ := url.ParseQuery(r.URL.RawQuery)
+
+			dungeonWidth := parseIntOption(query["dungeonWidth"], 100, 20, 1000)
+			dungeonHeight := parseIntOption(query["dungeonHeight"], 100, 20, 1000)
+			roomAttempts = parseIntOption(query["roomAttempts"], 200, 1, 100000)
+			minRoomSize = parseIntOption(query["minRoomSize"], 5, 1, int(math.Min(float64(dungeonWidth - 2), float64(dungeonHeight - 2))))
+			maxRoomSize = parseIntOption(query["maxRoomSize"], minRoomSize + 1, minRoomSize, int(math.Min(float64(dungeonWidth - 2), float64(dungeonHeight - 2))))
+			pixelSize = parseIntOption(query["pixelSize"], 4, 1, 20)
+
+			if(len(query["seed"]) != 0) {
+				seed, err := strconv.ParseInt(query["seed"][0], 10, 64)
+				if err == nil {
+					rand.Seed(seed)
+				} else {
+					rand.Seed(time.Now().UTC().UnixNano())
+				}
 			} else {
 				rand.Seed(time.Now().UTC().UnixNano())
 			}
 
-			dungeon := generateDungeon(100, 100)
+			dungeon := generateDungeon(dungeonWidth, dungeonHeight)
 			w.Header().Set("Content-Type", "image/png")
 			png.Encode(w, dungeonToImage(dungeon))
 		})
