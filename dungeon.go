@@ -375,10 +375,10 @@ func renderDungeon(dungeon Dungeon) {
 
 func dungeonToImage(dungeon Dungeon) image.Image {
 	pixelSize := 4
-	m := image.NewRGBA(image.Rect(0, 0, dungeon.width * pixelSize, dungeon.height * pixelSize))
+	m := image.NewRGBA(image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize))
 	for y := 0; y < dungeon.height; y++ {
 		for x := 0; x < dungeon.width; x++ {
-			pixelColor := color.RGBA{ 0, 0, 0, 0 }
+			pixelColor := color.RGBA{0, 0, 0, 0}
 
 			switch dungeon.tiles[y][x].material {
 			case WALL:
@@ -399,10 +399,10 @@ func dungeonToImage(dungeon Dungeon) image.Image {
 
 			draw.Draw(
 				m, // dst image
-				image.Rect(x * pixelSize, y * pixelSize, (x + 1) * pixelSize, (y + 1) * pixelSize),
-				&image.Uniform{ pixelColor }, // src image
-				image.ZP, // point
-				draw.Src, // OP
+				image.Rect(x*pixelSize, y*pixelSize, (x+1)*pixelSize, (y+1)*pixelSize),
+				&image.Uniform{pixelColor}, // src image
+				image.ZP,                   // point
+				draw.Src,                   // OP
 			)
 		}
 	}
@@ -424,26 +424,26 @@ func generateDungeon(width int, height int) Dungeon {
 func main() {
 	serverFlag := flag.Bool("server", false, "Run as a server on port 8080 and serve PNG files")
 	flag.Parse()
-	if(!*serverFlag) {
+	if !*serverFlag {
 		dungeon := generateDungeon(40, 40)
 		renderDungeon(dungeon)
 	} else {
-		fs := http.FileServer( http.Dir("") )
+		fs := http.FileServer(http.Dir(""))
 		http.Handle("/", fs)
 
 		http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path[1:]
 			fmt.Println("path: ", path)
 			seed, err := strconv.ParseInt(strings.Split(path, "/")[1], 10, 64)
-			if(err == nil) {
+			if err == nil {
 				rand.Seed(seed)
 			} else {
 				rand.Seed(time.Now().UTC().UnixNano())
 			}
 
 			dungeon := generateDungeon(100, 100)
-			w.Header().Set("Content-Type","image/png")
-			png.Encode(w, dungeonToImage(dungeon) )
+			w.Header().Set("Content-Type", "image/png")
+			png.Encode(w, dungeonToImage(dungeon))
 		})
 
 		http.ListenAndServe(":8080", nil)
