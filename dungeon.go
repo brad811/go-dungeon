@@ -1,19 +1,23 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"math/rand"
+	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
-
-// dungeon size
-var dungeonWidth = 40
-var dungeonHeight = 40
 
 // dungeon rooms
 var roomAttempts = 200
 var minRoomSize = 5
-var maxRoomSize = 10
+var maxRoomSize = 15
 
 const (
 	WALL   = 0
@@ -369,14 +373,79 @@ func renderDungeon(dungeon Dungeon) {
 	}
 }
 
-func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
+func dungeonToImage(dungeon Dungeon) image.Image {
+	pixelSize := 4
+	m := image.NewRGBA(image.Rect(0, 0, dungeon.width * pixelSize, dungeon.height * pixelSize))
+	for y := 0; y < dungeon.height; y++ {
+		for x := 0; x < dungeon.width; x++ {
+			pixelColor := color.RGBA{ 0, 0, 0, 0 }
 
-	dungeon := createEmptyDungeon(dungeonWidth, dungeonHeight)
+			switch dungeon.tiles[y][x].material {
+			case WALL:
+				pixelColor = color.RGBA{0, 0, 0, 255}
+				break
+			case FLOOR:
+				pixelColor = color.RGBA{200, 200, 200, 255}
+				break
+			case DOOR:
+				pixelColor = color.RGBA{200, 150, 0, 255}
+				break
+			case TUNNEL:
+				pixelColor = color.RGBA{255, 255, 255, 255}
+				break
+			default:
+				pixelColor = color.RGBA{255, 0, 0, 255}
+			}
+
+			draw.Draw(
+				m, // dst image
+				image.Rect(x * pixelSize, y * pixelSize, (x + 1) * pixelSize, (y + 1) * pixelSize),
+				&image.Uniform{ pixelColor }, // src image
+				image.ZP, // point
+				draw.Src, // OP
+			)
+		}
+	}
+
+	return m
+}
+
+func generateDungeon(width int, height int) Dungeon {
+	dungeon := createEmptyDungeon(width, height)
 	dungeon = createRooms(dungeon, minRoomSize, maxRoomSize, roomAttempts)
 	dungeon = createMaze(dungeon)
 	dungeon = identifyEdges(dungeon)
 	dungeon = connectRegions(dungeon)
 	trimTunnels(dungeon)
-	renderDungeon(dungeon)
+
+	return dungeon
+}
+
+func main() {
+	serverFlag := flag.Bool("server", false, "Run as a server on port 8080 and serve PNG files")
+	flag.Parse()
+	if(!*serverFlag) {
+		dungeon := generateDungeon(40, 40)
+		renderDungeon(dungeon)
+	} else {
+		fs := http.FileServer( http.Dir("") )
+		http.Handle("/", fs)
+
+		http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path[1:]
+			fmt.Println("path: ", path)
+			seed, err := strconv.ParseInt(strings.Split(path, "/")[1], 10, 64)
+			if(err == nil) {
+				rand.Seed(seed)
+			} else {
+				rand.Seed(time.Now().UTC().UnixNano())
+			}
+
+			dungeon := generateDungeon(100, 100)
+			w.Header().Set("Content-Type","image/png")
+			png.Encode(w, dungeonToImage(dungeon) )
+		})
+
+		http.ListenAndServe(":8080", nil)
+	}
 }
