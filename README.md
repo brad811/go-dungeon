@@ -3,8 +3,18 @@ go-dungeon
 
 Random dungeon generator written in go. Based on the method described here: http://journal.stuffwithstuff.com/2014/12/21/rooms-and-mazes/
 
-To Run
-------
+Run as a Server and Generate Images
+-----------------------------------
+ * run the command `go run dungeon.go -server`
+ * navigate to `localhost:8080`
+ * click the "Generate Dungeon" button to generate another random dungeon
+
+Example Image Output
+--------------------
+![alt tag](http://i.imgur.com/eEIppTX.png)
+
+Run in Command Line and Generate ASCII
+--------------------------------------
 `go run dungeon.go`
 
 Legend
@@ -17,8 +27,8 @@ Legend
 
 `-` - tunnel
 
-Sample Output
--------------
+Sample ASCII Output
+-------------------
 
 ```shell
 Creating empty dungeon...
