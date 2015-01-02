@@ -82,7 +82,6 @@ $(function() {
 });
 $( "#pixel_size_label" ).html( "Pixel size: " + pixel_size );
 
-
 function generateDungeon() {
 	d = new Date();
 	queryString = "/generate/?time="+d.getTime();
@@ -115,6 +114,19 @@ function generateDungeon() {
 	pixelSize = $( "#pixel_size_slider" ).slider( "option", "value" );
 	if(pixelSize) {
 		queryString += "&pixelSize=" + pixelSize;
+	}
+
+	try {
+		seed = parseInt( $( "#seed" ).val() );
+		if(!isNaN(seed) && seed % 1 === 0) {
+			queryString += "&seed=" + seed
+		} else {
+			console.log("Invalid seed!");
+		}
+	} catch(e) {
+		// invalid number
+		console.log("Invalid seed!");
+		console.log(e);
 	}
 
 	$("#dungeonImage").attr("src", queryString);
