@@ -423,7 +423,7 @@ func generateDungeon(width int, height int) Dungeon {
 }
 
 func parseIntOption(option []string, defaultValue int, min int, max int) int {
-	if(len(option) == 0) {
+	if len(option) == 0 {
 		return defaultValue
 	} else {
 		value, err := strconv.Atoi(option[0])
@@ -446,17 +446,16 @@ func main() {
 		http.Handle("/", fs)
 
 		http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
-			path := r.URL.Path[1:]
 			query, _ := url.ParseQuery(r.URL.RawQuery)
 
 			dungeonWidth := parseIntOption(query["dungeonWidth"], 100, 20, 1000)
 			dungeonHeight := parseIntOption(query["dungeonHeight"], 100, 20, 1000)
 			roomAttempts = parseIntOption(query["roomAttempts"], 200, 1, 100000)
-			minRoomSize = parseIntOption(query["minRoomSize"], 5, 1, int(math.Min(float64(dungeonWidth - 2), float64(dungeonHeight - 2))))
-			maxRoomSize = parseIntOption(query["maxRoomSize"], minRoomSize + 1, minRoomSize, int(math.Min(float64(dungeonWidth - 2), float64(dungeonHeight - 2))))
+			minRoomSize = parseIntOption(query["minRoomSize"], 5, 1, int(math.Min(float64(dungeonWidth-2), float64(dungeonHeight-2))))
+			maxRoomSize = parseIntOption(query["maxRoomSize"], minRoomSize+1, minRoomSize, int(math.Min(float64(dungeonWidth-2), float64(dungeonHeight-2))))
 			pixelSize = parseIntOption(query["pixelSize"], 4, 1, 20)
 
-			if(len(query["seed"]) != 0) {
+			if len(query["seed"]) != 0 {
 				seed, err := strconv.ParseInt(query["seed"][0], 10, 64)
 				if err == nil {
 					rand.Seed(seed)
