@@ -5,6 +5,8 @@ Random dungeon generator written in go. Based on the method described here: http
 
 Run as a Server and Generate Images
 -----------------------------------
+Running the program as a server will allow you to configure the parameters of the dungeon through a web page. The currently available inputs are dungeon width, dungeon height, how many times to try to place random rooms, minimum room size, maximum room size, how large each tile is in pixels, and the random integer seed to use. To run the program as a server:
+
  * run the command `go run dungeon.go -server`
  * navigate to `localhost:8080`
  * click the "Generate Dungeon" button to generate another random dungeon
