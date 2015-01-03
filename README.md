@@ -11,7 +11,7 @@ Run as a Server and Generate Images
 
 Example Image Output
 --------------------
-![alt tag](http://i.imgur.com/eEIppTX.png)
+![alt tag](http://i.imgur.com/rLqddnJ.png)
 
 Run in Command Line and Generate ASCII
 --------------------------------------
