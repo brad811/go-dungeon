@@ -435,6 +435,13 @@ func dungeonToImage(dungeon Dungeon) image.Image {
 	mask := generateTileMask(pixelSize)
 
 	m := image.NewRGBA(image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize))
+	draw.Draw(
+		m, // dst image
+		image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize), // rectangle
+		&image.Uniform{color.RGBA{255, 255, 255, 255}},                      // src image
+		image.ZP,  // point
+		draw.Over, // OP
+	)
 
 	for y := 0; y < dungeon.height; y++ {
 		for x := 0; x < dungeon.width; x++ {
