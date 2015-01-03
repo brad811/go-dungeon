@@ -21,11 +21,13 @@ var minRoomSize = 5
 var maxRoomSize = 15
 var pixelSize = 4
 
+type Material int
+
 const (
-	WALL   = 0
-	FLOOR  = 1
-	DOOR   = 2
-	TUNNEL = 3
+	WALL Material = iota
+	FLOOR
+	DOOR
+	TUNNEL
 )
 
 type Point struct {
@@ -35,7 +37,7 @@ type Point struct {
 
 type Tile struct {
 	region   int
-	material int
+	material Material
 }
 
 type Room struct {
@@ -57,6 +59,7 @@ func createEmptyDungeon(width int, height int) Dungeon {
 	fmt.Println("Creating empty dungeon...")
 	dungeon := Dungeon{width: width, height: height}
 	dungeon.tiles = make([][]Tile, height)
+
 	for i := range dungeon.tiles {
 		dungeon.tiles[i] = make([]Tile, width)
 	}
@@ -375,8 +378,64 @@ func renderDungeon(dungeon Dungeon) {
 	}
 }
 
+func generateTileMask(size int) image.Image {
+	lightUniform := &image.Uniform{color.RGBA{255, 255, 255, 120}}
+	mediumUniform := &image.Uniform{color.RGBA{255, 255, 255, 180}}
+	darkUniform := &image.Uniform{color.RGBA{255, 255, 255, 220}}
+
+	mask := image.NewRGBA(image.Rect(0, 0, size, size))
+
+	// background color
+	draw.Draw(
+		mask, // dst image
+		image.Rect(0, 0, size, size), // rectangle
+		mediumUniform,                // src image
+		image.ZP,                     // point
+		draw.Src,                     // OP
+	)
+
+	// lighter lines
+	draw.Draw(
+		mask, // dst image
+		image.Rect(0, 0, size-1, 1), // rectangle
+		lightUniform,                // src image
+		image.ZP,                    // point
+		draw.Src,                    // OP
+	)
+
+	draw.Draw(
+		mask, // dst image
+		image.Rect(0, 1, 1, size-1), // rectangle
+		lightUniform,                // src image
+		image.ZP,                    // point
+		draw.Src,                    // OP
+	)
+
+	// darker lines
+	draw.Draw(
+		mask, // dst image
+		image.Rect(size-1, 1, size, size-1), // rectangle
+		darkUniform,                         // src image
+		image.ZP,                            // point
+		draw.Src,                            // OP
+	)
+
+	draw.Draw(
+		mask, // dst image
+		image.Rect(1, size-1, size, size), // rectangle
+		darkUniform,                       // src image
+		image.ZP,                          // point
+		draw.Src,                          // OP
+	)
+
+	return mask
+}
+
 func dungeonToImage(dungeon Dungeon) image.Image {
+	mask := generateTileMask(pixelSize)
+
 	m := image.NewRGBA(image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize))
+
 	for y := 0; y < dungeon.height; y++ {
 		for x := 0; x < dungeon.width; x++ {
 			pixelColor := color.RGBA{0, 0, 0, 0}
@@ -386,24 +445,26 @@ func dungeonToImage(dungeon Dungeon) image.Image {
 				pixelColor = color.RGBA{0, 0, 0, 255}
 				break
 			case FLOOR:
-				pixelColor = color.RGBA{200, 200, 200, 255}
+				pixelColor = color.RGBA{128, 128, 128, 255}
 				break
 			case DOOR:
-				pixelColor = color.RGBA{200, 150, 0, 255}
+				pixelColor = color.RGBA{150, 100, 0, 255}
 				break
 			case TUNNEL:
-				pixelColor = color.RGBA{255, 255, 255, 255}
+				pixelColor = color.RGBA{200, 200, 200, 255}
 				break
 			default:
 				pixelColor = color.RGBA{255, 0, 0, 255}
 			}
 
-			draw.Draw(
+			draw.DrawMask(
 				m, // dst image
-				image.Rect(x*pixelSize, y*pixelSize, (x+1)*pixelSize, (y+1)*pixelSize),
-				&image.Uniform{pixelColor}, // src image
-				image.ZP,                   // point
-				draw.Src,                   // OP
+				image.Rect(x*pixelSize, y*pixelSize, (x+1)*pixelSize, (y+1)*pixelSize), // rectangle
+				&image.Uniform{pixelColor},                                             // src image
+				image.ZP,                                                               // point
+				mask,                                                                   // mask image
+				image.ZP,                                                               // mask point
+				draw.Over,                                                              // OP
 			)
 		}
 	}
@@ -448,12 +509,12 @@ func main() {
 		http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
 			query, _ := url.ParseQuery(r.URL.RawQuery)
 
-			dungeonWidth := parseIntOption(query["dungeonWidth"], 100, 20, 1000)
-			dungeonHeight := parseIntOption(query["dungeonHeight"], 100, 20, 1000)
+			dungeonWidth := parseIntOption(query["dungeonWidth"], 50, 20, 1000)
+			dungeonHeight := parseIntOption(query["dungeonHeight"], 50, 20, 1000)
 			roomAttempts = parseIntOption(query["roomAttempts"], 200, 1, 100000)
 			minRoomSize = parseIntOption(query["minRoomSize"], 5, 1, int(math.Min(float64(dungeonWidth-2), float64(dungeonHeight-2))))
 			maxRoomSize = parseIntOption(query["maxRoomSize"], minRoomSize+1, minRoomSize, int(math.Min(float64(dungeonWidth-2), float64(dungeonHeight-2))))
-			pixelSize = parseIntOption(query["pixelSize"], 4, 1, 20)
+			pixelSize = parseIntOption(query["pixelSize"], 10, 1, 20)
 
 			if len(query["seed"]) != 0 {
 				seed, err := strconv.ParseInt(query["seed"][0], 10, 64)

@@ -1,4 +1,4 @@
-var dungeon_width = 100;
+var dungeon_width = 50;
 $(function() {
 	$( "#dungeon_width_slider" ).slider({
 		value: dungeon_width,
@@ -12,7 +12,7 @@ $(function() {
 });
 $( "#dungeon_width_label" ).html( "Dungeon width: " + dungeon_width );
 
-var dungeon_height = 100;
+var dungeon_height = 50;
 $(function() {
 	$( "#dungeon_height_slider" ).slider({
 		value: dungeon_height,
@@ -68,7 +68,7 @@ $(function() {
 });
 $( "#max_room_size_label" ).html( "Max room size: " + max_room_size );
 
-var pixel_size = 4;
+var pixel_size = 10;
 $(function() {
 	$( "#pixel_size_slider" ).slider({
 		value: pixel_size,
