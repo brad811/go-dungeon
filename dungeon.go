@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"image"
@@ -535,8 +536,22 @@ func main() {
 			}
 
 			dungeon := generateDungeon(dungeonWidth, dungeonHeight)
-			w.Header().Set("Content-Type", "image/png")
-			png.Encode(w, dungeonToImage(dungeon))
+
+			if(r.URL.Path == "/generate/json/") {
+				tiles := make([][]int, dungeonHeight)
+				for i := 0; i < dungeonHeight; i++ {
+					tiles[i] = make([]int, dungeonWidth)
+					for j := 0; j < dungeonWidth; j++ {
+						tiles[i][j] = int(dungeon.tiles[i][j].material)
+					}
+				}
+
+				dungeonJson, _ := json.Marshal(tiles)
+				fmt.Fprintf(w, string(dungeonJson))
+			} else {
+				w.Header().Set("Content-Type", "image/png")
+				png.Encode(w, dungeonToImage(dungeon))
+			}
 		})
 
 		http.ListenAndServe(":8080", nil)
