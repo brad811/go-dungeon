@@ -537,7 +537,7 @@ func main() {
 
 			dungeon := generateDungeon(dungeonWidth, dungeonHeight)
 
-			if(r.URL.Path == "/generate/json/") {
+			if r.URL.Path == "/generate/json/" {
 				tiles := make([][]int, dungeonHeight)
 				for i := 0; i < dungeonHeight; i++ {
 					tiles[i] = make([]int, dungeonWidth)
