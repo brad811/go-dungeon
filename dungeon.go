@@ -275,8 +275,8 @@ func connectRegions(dungeon Dungeon) Dungeon {
 	// to see if any of them are still a separate region
 	connectedRegions := map[int]bool{}
 RoomsLoop:
-	for i := range rand.Perm(len(dungeon.rooms)) {
-		for j := range rand.Perm(len(dungeon.rooms[i].edges)) {
+	for _, i := range rand.Perm(len(dungeon.rooms)) {
+		for _, j := range rand.Perm(len(dungeon.rooms[i].edges)) {
 			room := dungeon.rooms[i]
 			edge := room.edges[j]
 			x := edge.x
